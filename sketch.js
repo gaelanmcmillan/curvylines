@@ -12,6 +12,10 @@ var startFadingDirections = false;
 
 function setup() {
   canvas = createCanvas(400, 400);
+  canvas.style(
+    "touch-action", "none"
+  );
+
   frameRate(30);
   updateCountdown += updateInterval;
 
