@@ -16,7 +16,7 @@ function setup() {
     "touch-action", "none"
   );
 
-  frameRate(30);
+  frameRate(60);
   updateCountdown += updateInterval;
 
   fadeTimeDiv = createDiv("Fade time: ");
