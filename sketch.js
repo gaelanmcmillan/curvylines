@@ -29,21 +29,22 @@ function setup() {
     debugCheckbox.showDebug = !debugCheckbox.showDebug;
   })
   
-  canvas.mousePressed(() => {
-    pointCollections.push([]);
-  });
-
-  canvas.mouseReleased(() => {
-    startFadingDirections = true;
-  })
-  
-  canvas.mouseOver(() => {
+  const onClickOrTouch = () => {
     canDrawPoints = true;
-  });
-  
-  canvas.mouseOut(() => {
+    pointCollections.push([]);
+  }
+
+  const onClickOrTouchEnded = () => {
     canDrawPoints = false;
-  })
+    startFadingDirections = true;
+  }
+
+  canvas.touchStarted(onClickOrTouch);
+  canvas.mousePressed(onClickOrTouch);
+
+  canvas.touchEnded(onClickOrTouchEnded);
+  canvas.mouseReleased(onClickOrTouchEnded);
+  canvas.mouseOut(onClickOrTouchEnded);
 }
 
 function addPointsToCurvyLine(points) {
@@ -52,7 +53,16 @@ function addPointsToCurvyLine(points) {
     
     // add points to line
     if (updateCountdown <= 0) {
-      points.push({ x: mouseX, y: mouseY, age: 0, deleteMe: false });
+      let posx, posy;
+      if (touches.length) {
+        posx = touches[0].x;
+        posy = touches[0].y;
+      } else {
+        posx = mouseX;
+        posy = mouseY;
+      }
+
+      points.push({ x: posx, y: posy, age: 0 });
       updateCountdown += updateInterval;
     }
   } 
@@ -140,7 +150,7 @@ function showDirections() {
       directionsColour = lerp(directionsColour, backgroundColour, 0.1);
     }
     fill(directionsColour);
-    text("click and hold to draw", width/2, height/2);
+    text("click and hold or touch to draw", width/2, height/2);
     pop();
   }
 }
