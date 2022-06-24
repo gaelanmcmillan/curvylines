@@ -2,7 +2,7 @@ var pointCollections = [];
 var anchor = {x: 0, y:0};
 var updateCountdown = 0;
 var updateInterval = 1;
-var deleteThreshold = 0.05;
+var deleteThreshold = 10;
 var deleteAge = 1;
 var canDrawPoints = false;
 var directionsColour = 160;
@@ -16,7 +16,7 @@ function setup() {
     "touch-action", "none"
   );
 
-  frameRate(60);
+  frameRate(1);
   updateCountdown += updateInterval;
 
   fadeTimeDiv = createDiv("Fade time: ");
@@ -72,13 +72,6 @@ function addPointsToCurvyLine(points) {
   } 
 }
 
-function deleteIfCloseToPoint(p, q) {
-  if (p.age > deleteAge && dist(p.x, p.y, q.x, q.y) <= deleteThreshold) {
-    console.log("final point flagged for deletion");
-    p.deleteMe = true;
-  }
-}
-
 function timeToDelete(p,q) {
   return (p.age > deleteAge && dist(p.x, p.y, q.x, q.y) <= deleteThreshold)
 }
@@ -92,17 +85,92 @@ function deleteLastIfItsTime(points) {
   return points;
 }
 
-function updateCurvyLinePositions(points) {
-  
+function agePointsBy(points, amt) {
+  for (let point of points) { point.age += amt; }
+  return points;
+}
+/**
+ * All points inch toward the last point in the array.
+ * @param {*} points an array of points 
+ * @returns the modified array of points
+ */
+function moveTowardEndpoint(points) {
   // move points toward the next
   for (let i = 0; i < points.length-1; i++) {
     points[i].x = lerp(points[i].x, points[i+1].x, fadeTimeSlider.value());
     points[i].y = lerp(points[i].y, points[i+1].y, fadeTimeSlider.value());
   }
   
-  for (let point of points) { point.age++; }
+  points = agePointsBy(points, 1);
   
   return deleteLastIfItsTime(points);
+}
+
+function deleteIfCloseToCenter(points, centerIdx) {
+  if (points.length == 1) return [];
+  
+  console.log("deleting at " + centerIdx);
+  if (centerIdx-1 >= 0 && centerIdx+1 < points.length) {
+    if (sufficientlyClose(points[centerIdx], points[centerIdx+1]) || 
+        sufficientlyClose(points[centerIdx], points[centerIdx-1])) {
+      return points.filter(p => p != points[centerIdx]);
+    }
+  }
+
+  return points;
+}
+
+function sufficientlyClose(p, q, thresh) {
+  return (dist(p.x,p.y,q.x,q.y) <= thresh);
+}
+
+function deleteSufficientlyClosePoints(pts) {
+  if (pts.length <= 2) return [];
+  let newPoints = [pts[0]];
+  let deleted = false;
+  for (let i = 1; i < pts.length-1; ++i) {
+    if (!deleted) {
+      if (sufficientlyClose(pts[i], pts[i-1], deleteThreshold) || sufficientlyClose(pts[i], pts[i+1], deleteThreshold)) {
+        continue;
+      }
+
+      newPoints.add[pts[i]];
+    }
+  }
+
+  return pts;
+
+  // return pts.filter(p => !toDelete.has(p));
+}
+
+/**
+ * Rather than points approaching the last point, points approach the center point(s)
+ * @param {*} points an array of points
+ * @returns the modified array of points
+ */
+function moveTowardCenterpoint(points) {
+  let len = points.length;
+  let centerIdx = Math.floor(len/2);
+
+  for (let i = 0; i < len; i++) {
+    if (i < centerIdx) {
+      points[i].x = lerp(points[i].x, points[i+1].x, fadeTimeSlider.value());
+      points[i].y = lerp(points[i].y, points[i+1].y, fadeTimeSlider.value());
+    } else if (i > centerIdx) {
+      points[i].x = lerp(points[i].x, points[i-1].x, fadeTimeSlider.value());
+      points[i].y = lerp(points[i].y, points[i-1].y, fadeTimeSlider.value());
+    } else {
+      push();
+      stroke(255,0,0);
+      strokeWeight(5);
+      point(points[i].x, points[i].y);
+      pop();
+    }
+  }
+
+  // points = agePointsBy(points, 1);
+
+  return deleteIfCloseToCenter(points, centerIdx);
 }
 
 /**
@@ -127,8 +195,26 @@ function drawFatLine(points, thinnest, fattest) {
 
 function drawAllLines() {
   for (let points of pointCollections) {
-    points = updateCurvyLinePositions(points);
-    drawFatLine(points, 2, 10);
+    points = moveTowardEndpoint(points);
+    drawFatLine(points, 2, 4);
+  }
+}
+
+function drawAllLinesCenter() {
+  for (let points of pointCollections) {
+    if (!mouseIsPressed) points = moveTowardCenterpoint(points);
+    drawFatLine(points, 2, 4);
+  }
+}
+
+function drawFusion() {
+  for (var [idx, points] of pointCollections.entries()) {
+    if (mouseIsPressed && idx == pointCollections.length-1) {
+      points = moveTowardEndpoint(points);
+    } else {
+      points = moveTowardCenterpoint(points);
+    }
+    drawFatLine(points, 2, 4);
   }
 }
 
@@ -163,6 +249,8 @@ function draw() {
   background(backgroundColour);
   showDirections();
   addPointsToCurvyLine(pointCollections[pointCollections.length-1]);
-  drawAllLines();
+  // drawAllLines();
+  // drawAllLinesCenter();
+  drawFusion();
   showDebugInfo();
 }
