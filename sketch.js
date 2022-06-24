@@ -5,6 +5,10 @@ var updateInterval = 1;
 var deleteThreshold = 0.05;
 var deleteAge = 1;
 var canDrawPoints = false;
+var directionsColour = 160;
+var backgroundColour = 220;
+var doShowDirections = true;
+var startFadingDirections = false;
 
 function setup() {
   canvas = createCanvas(400, 400);
@@ -28,6 +32,10 @@ function setup() {
   canvas.mousePressed(() => {
     pointCollections.push([]);
   });
+
+  canvas.mouseReleased(() => {
+    startFadingDirections = true;
+  })
   
   canvas.mouseOver(() => {
     canDrawPoints = true;
@@ -103,18 +111,15 @@ function drawFatLine(points, thinnest, fattest) {
   }
 }
 
-function draw() {
-  background(220);
-  
-  let pointCount = 0;
-  
-  addPointsToCurvyLine(pointCollections[pointCollections.length-1]);
-  
+function drawAllLines() {
   for (let points of pointCollections) {
     points = updateCurvyLinePositions(points);
     drawFatLine(points, 2, 10);
   }
+}
 
+function showDebugInfo() {
+  let pointCount = 0;
   pointCount = pointCollections
     .map(arr => arr.length)
     .reduce((a,b) => a+b, 0);
@@ -124,4 +129,26 @@ function draw() {
     text(fadeTimeSlider.value(), 10,60);
     text(`Number of points: ${pointCount}`, 10, 40);
   }
+}
+
+function showDirections() {
+  if (doShowDirections) {
+    push();
+    textAlign(CENTER, CENTER);
+    textStyle(ITALIC);
+    if (startFadingDirections) {
+      directionsColour = lerp(directionsColour, backgroundColour, 0.1);
+    }
+    fill(directionsColour);
+    text("click and hold to draw", width/2, height/2);
+    pop();
+  }
+}
+
+function draw() {
+  background(backgroundColour);
+  showDirections();
+  addPointsToCurvyLine(pointCollections[pointCollections.length-1]);
+  drawAllLines();
+  showDebugInfo();
 }
