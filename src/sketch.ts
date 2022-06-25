@@ -117,14 +117,32 @@ const sketch = (p5: P5) => {
         }
     }
 
+    const ageAllPoints = () => {
+        for (let line of LINES) {
+            line.agePointsBy(1);
+        }
+    }
+
+    const debugAllLines = () => {
+        for (let line of LINES) {
+            line.debug(p5);
+        }
+    }
+
     p5.draw = () => {
         p5.background(BG_COLOUR);
         displayDirections();
         addToCurrentLine();
-        processAllLines();
+
+        if (!p5.keyIsPressed) {
+            processAllLines();
+            ageAllPoints();
+        }
         drawAllLines();
         deleteCenterPointOfEachLine();
         // drawLinesToCentroid();
+
+        // debugAllLines();
     }
 }
 

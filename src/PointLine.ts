@@ -52,20 +52,65 @@ export class PointLine {
     shrink(p5: P5, lerpAmt: number) {
         // move all points toward the center point
         let centerIndex = this.getCenterIndex();
-        for (let i = 0; i < this.points.length; ++i) {
-            if (i < centerIndex) {
-                this.points[i] = movePoint(p5, this.points[i], this.points[i+1], lerpAmt);
-            } else if (i > centerIndex) {
-                this.points[i] = movePoint(p5, this.points[i], this.points[i-1], lerpAmt);
-            } else {
-                // this.points[i] = movePoint(p5, this.points[i], this.getCentroid(), lerpAmt / 10);
-            }
+        for (let i = 0; i < centerIndex; ++i) {
+            this.points[i] = movePoint(p5, this.points[i], this.points[i+1], lerpAmt);
+        }
+        
+        for (let i = this.points.length-1; i > centerIndex; i--) {
+            this.points[i] = movePoint(p5, this.points[i], this.points[i-1], lerpAmt);
         }
     }
 
     followToEnd(p5: P5, lerpAmt: number) {
         for (let i = 0; i < this.points.length-1; i++) {
             this.points[i] = movePoint(p5, this.points[i], this.points[i+1], lerpAmt);
+        }
+    }
+
+    debug(p5: P5) {
+        const DRAW_POINTS = true;
+        let len = this.points.length;
+        if (len > 2) {
+            let c = this.getCentroid();
+            let centerIndex = this.getCenterIndex();
+            p5.push();
+            p5.stroke(255,0,0);
+            p5.noFill();
+            p5.circle(this.points[centerIndex].x, this.points[centerIndex].y, 30);
+            p5.pop();
+            
+            p5.push();
+            p5.textAlign(p5.CENTER, p5.CENTER);
+            p5.text(`Total points: ${len}`, c.x, c.y-20);
+            p5.text(`Center index: ${centerIndex}`, c.x, c.y);
+            
+            for (let i = 0; i < len; ++i) {
+                if (DRAW_POINTS) {
+                    p5.push();
+                    p5.strokeWeight(10);
+                    p5.stroke(0);
+                    p5.point(this.points[i].x, this.points[i].y);
+                    p5.pop();
+                }
+
+                if (i < centerIndex) {
+                    let d = pointDistance(p5, this.points[i], this.points[i+1]);
+                    p5.push();
+                    p5.stroke(150);
+                    p5.line(this.points[i].x, this.points[i].y, this.points[i].x + 15, this.points[i].y + 15);
+                    p5.pop(); 
+                    p5.text(`d: ${d}`, this.points[i].x + 20, this.points[i].y + 20); 
+                } else if (i > centerIndex) {
+                    let d = pointDistance(p5, this.points[i], this.points[i-1]);
+                    p5.push();
+                    p5.stroke(150);
+                    p5.line(this.points[i].x, this.points[i].y, this.points[i].x + 15, this.points[i].y + 15);
+                    p5.pop(); 
+                    p5.text(`d: ${d}`, this.points[i].x + 20, this.points[i].y + 20); 
+                }
+                
+            }
+            p5.pop();
         }
     }
 
@@ -91,35 +136,56 @@ export class PointLine {
         }
     }
 
-    deletePointAtIndex(index: number) {
+    deletePointsAtIndices(...indices: number[]) {
         let newPoints: Pointlike[] = [];
         for (let i = 0; i < this.points.length; ++i) {
-            if (i != index) {
+            if (!indices.includes(i)) {
                 newPoints.push(this.points[i]);
             }
         }
         this.points = newPoints;
     }
 
+    
     deleteCenterPointIfTooClose(p5: P5, threshold: number) {
         if (this.points.length <= 2) {
             this.points = [];
             return;
         }
         let centerIdx = this.getCenterIndex();
-        if (pointDistance(p5, this.points[centerIdx], this.points[centerIdx-1]) <= threshold ||
-            pointDistance(p5, this.points[centerIdx], this.points[centerIdx+1]) <= threshold) {
-            this.deletePointAtIndex(centerIdx);
+        let deletes: number[] = [];
+
+        if (pointDistance(p5, this.points[centerIdx], this.points[centerIdx-1]) <= threshold) {
+            deletes.push(centerIdx-1);
+        }
+
+        if (pointDistance(p5, this.points[centerIdx], this.points[centerIdx+1]) <= threshold) {
+            deletes.push(centerIdx+1);
+        }
+
+        if (deletes.length != 0) {
+            this.deletePointsAtIndices(centerIdx);
         }
     }
 
+    /**
+     * Main drawing function. Visualizes the line by drawing small lines between each point.
+     * @param p5 
+     * @param thin 
+     * @param thick 
+     */
     draw(p5: P5, thin: number, thick: number) {
+        const CHANGE_COLOUR = true;
         let centerIndex = this.getCenterIndex();
+
         p5.push();
         for (let i = 0; i < this.points.length-1; ++i) {
-            let s = p5.map(this.points[i].age!, 0, 100, 0, 220);
-            console.log(this.points[i].age!, s);
-            p5.stroke(p5.map(this.points[i].age!, 0, 100, 0, 220));
+            if (CHANGE_COLOUR) {
+                let s = Math.min(p5.map(this.points[i].age!, 0, 100, 0, 220), 220);
+                p5.stroke(s, 20, 255);
+            }
+
+            
             p5.strokeWeight(p5.map(Math.abs(i-centerIndex),0,centerIndex,thick,thin))
             p5.line(this.points[i].x, this.points[i].y, this.points[i+1].x, this.points[i+1].y);
         }
